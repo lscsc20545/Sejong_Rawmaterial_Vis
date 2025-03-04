@@ -5,3 +5,4 @@ numpy==1.26.2
 xlwings==0.30.12
 scipy==1.11.4
 xlwings>=0.30.0
+pywin32; platform_system == "Windows"

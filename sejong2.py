@@ -5,10 +5,16 @@ import plotly.graph_objects as go
 import pandas as pd
 import numpy as np
 import warnings
-import pythoncom
+import platform
 import plotly.express as px
 from scipy import stats
 import streamlit.components.v1 as components
+
+if platform.system() == 'Windows':
+    import pythoncom
+else:
+    # Windows가 아닌 환경에서 대체 기능 구현 또는 해당 기능 비활성화
+    pass
 
 # xlwings 설치 확인 및 설치
 try:
