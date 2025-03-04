@@ -16,13 +16,14 @@ else:
     # Windows가 아닌 환경에서 대체 기능 구현 또는 해당 기능 비활성화
     pass
 
-# xlwings 설치 확인 및 설치
 try:
+    # UDF 모드로 시도
     import xlwings as xw
-except ImportError:
-    import pip
-    pip.main(['install', 'xlwings'])
-    import xlwings as xw
+    xw.Book('data/sample_data.xlsx', mode='UDF')
+except:
+    # 실패하면 pandas로 폴백
+    import pandas as pd
+    pd.read_excel('data/sample_data.xlsx')
 
 from datetime import datetime, timedelta
 
