@@ -1,0 +1,7 @@
+streamlit==1.30.0
+plotly==5.18.0
+pandas==2.1.3
+numpy==1.26.2
+xlwings==0.30.12
+scipy==1.11.4
+xlwings>=0.30.0
