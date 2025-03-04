@@ -185,8 +185,9 @@ def initialize_session_state():
 def load_sample_data():
     """샘플 데이터 로드 (xlwings 사용)"""
     try:
-        # COM 초기화 (Windows 환경에서 필요)
-        pythoncom.CoInitialize()
+        # COM 초기화 (Windows 환경에서만 필요)
+        if platform.system() == 'Windows':
+            pythoncom.CoInitialize()
         
         # 샘플 데이터 파일 경로
         sample_file = "data/sample_data.xlsx"
@@ -246,6 +247,7 @@ def load_sample_data():
         return None
 
 
+
 def load_uploaded_data(uploaded_file):
     """업로드된 파일 데이터 로드 (xlwings 사용)"""
     try:
@@ -256,7 +258,8 @@ def load_uploaded_data(uploaded_file):
             temp_path = tmp.name
         
         # COM 초기화 (Windows 환경에서 필요)
-        pythoncom.CoInitialize()
+        if platform.system() == 'Windows':
+            pythoncom.CoInitialize()
         
         all_data = {}
         
@@ -316,6 +319,7 @@ def load_uploaded_data(uploaded_file):
     except Exception as e:
         st.error(f"파일 업로드 중 오류 발생: {str(e)}")
         return None
+
 
 
 
