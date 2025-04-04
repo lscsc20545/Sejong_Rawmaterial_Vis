@@ -10,16 +10,13 @@ import plotly.express as px
 from scipy import stats
 import streamlit.components.v1 as components
 
-if platform.system() == 'Windows':
-    import pythoncom
-else:
-    # Windows가 아닌 환경에서 대체 기능 구현 또는 해당 기능 비활성화
-    pass
 
+# openpyxl 사용
+import openpyxl
 try:
-    # UDF 모드로 시도
-    import xlwings as xw
-    xw.Book('data/sample_data.xlsx', mode='UDF')
+    # openpyxl로 시도
+    import pandas as pd
+    pd.read_excel('data/sample_data.xlsx', engine='openpyxl')
 except:
     # 실패하면 pandas로 폴백
     import pandas as pd
@@ -184,64 +181,54 @@ def initialize_session_state():
 # 데이터 로드 함수
 @st.cache_data
 def load_sample_data():
-    """샘플 데이터 로드 (xlwings 사용)"""
+    """샘플 데이터 로드 (openpyxl 사용)"""
     try:
-        # COM 초기화 (Windows 환경에서만 필요)
-        if platform.system() == 'Windows':
-            pythoncom.CoInitialize()
-        
         # 샘플 데이터 파일 경로
         sample_file = "data/sample_data.xlsx"
         all_data = {}
         
-        # xlwings로 엑셀 파일 열기
-        app = xw.App(visible=False)
-        wb = app.books.open(sample_file)
+        # openpyxl로 엑셀 파일 열기
+        import openpyxl
+        wb = openpyxl.load_workbook(sample_file)
         
-        try:
-            # 모든 시트 처리
-            for sheet in wb.sheets:
-                sheet_name = sheet.name
-                
-                # 데이터 범위 읽기 (A1부터 데이터가 있는 마지막 셀까지)
-                data_range = sheet.used_range
-                values = data_range.value
-                
-                # 헤더가 있다고 가정하고 데이터프레임 생성
-                if values and len(values) > 1:
-                    headers = values[0]
-                    data = values[1:]
-                    df = pd.DataFrame(data, columns=headers)
-                    
-                    # 인덱스 컬럼이 없으면 추가
-                    if '날짜' not in df.columns:
-                        df = df.reset_index()
-                        df = df.rename(columns={'index': '날짜'})
-                    
-                    # 숫자 데이터 변환
-                    numeric_columns = ['실측', '배합', '상한선', '하한선']
-                    for col in numeric_columns:
-                        if col in df.columns:
-                            df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', ''), errors='coerce')
-                    
-                    # 날짜 변환
-                    if pd.api.types.is_numeric_dtype(df['날짜']):
-                        df['날짜'] = pd.TimedeltaIndex(df['날짜'], unit='D') + pd.Timestamp('1899-12-30')
-                    else:
-                        df['날짜'] = pd.to_datetime(df['날짜'], errors='coerce')
-                    
-                    # 결측치 처리
-                    df = df.dropna(subset=['날짜'])
-                    
-                    # 시트 이름을 구분으로 추가
-                    df['sheet_name'] = sheet_name
-                    
-                    all_data[sheet_name] = df
-        finally:
-            # 엑셀 파일 닫기 및 앱 종료
-            wb.close()
-            app.quit()
+        # 모든 시트 처리
+        for sheet_name in wb.sheetnames:
+            sheet = wb[sheet_name]
             
+            # 데이터 범위 읽기
+            values = list(sheet.values)
+            
+            # 헤더가 있다고 가정하고 데이터프레임 생성
+            if values and len(values) > 1:
+                headers = values[0]
+                data = values[1:]
+                df = pd.DataFrame(data, columns=headers)
+                
+                # 인덱스 컬럼이 없으면 추가
+                if '날짜' not in df.columns:
+                    df = df.reset_index()
+                    df = df.rename(columns={'index': '날짜'})
+                
+                # 숫자 데이터 변환
+                numeric_columns = ['실측', '배합', '상한선', '하한선']
+                for col in numeric_columns:
+                    if col in df.columns:
+                        df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', ''), errors='coerce')
+                
+                # 날짜 변환
+                if pd.api.types.is_numeric_dtype(df['날짜']):
+                    df['날짜'] = pd.TimedeltaIndex(df['날짜'], unit='D') + pd.Timestamp('1899-12-30')
+                else:
+                    df['날짜'] = pd.to_datetime(df['날짜'], errors='coerce')
+                
+                # 결측치 처리
+                df = df.dropna(subset=['날짜'])
+                
+                # 시트 이름을 구분으로 추가
+                df['sheet_name'] = sheet_name
+                
+                all_data[sheet_name] = df
+        
         return all_data
     except Exception as e:
         st.error(f"샘플 데이터 로드 중 오류 발생: {str(e)}")
@@ -250,7 +237,7 @@ def load_sample_data():
 
 
 def load_uploaded_data(uploaded_file):
-    """업로드된 파일 데이터 로드 (xlwings 사용)"""
+    """업로드된 파일 데이터 로드 (openpyxl 사용)"""
     try:
         # 임시 파일로 저장
         import tempfile
@@ -258,63 +245,53 @@ def load_uploaded_data(uploaded_file):
             tmp.write(uploaded_file.getvalue())
             temp_path = tmp.name
         
-        # COM 초기화 (Windows 환경에서 필요)
-        if platform.system() == 'Windows':
-            pythoncom.CoInitialize()
-        
         all_data = {}
         
-        # xlwings로 엑셀 파일 열기
-        app = xw.App(visible=False)
-        wb = app.books.open(temp_path)
+        # openpyxl로 엑셀 파일 열기
+        import openpyxl
+        wb = openpyxl.load_workbook(temp_path)
         
-        try:
-            # 모든 시트 처리
-            for sheet in wb.sheets:
-                sheet_name = sheet.name
-                
-                # 데이터 범위 읽기
-                data_range = sheet.used_range
-                values = data_range.value
-                
-                # 헤더가 있다고 가정하고 데이터프레임 생성
-                if values and len(values) > 1:
-                    headers = values[0]
-                    data = values[1:]
-                    df = pd.DataFrame(data, columns=headers)
-                    
-                    # 인덱스 컬럼이 없으면 추가
-                    if '날짜' not in df.columns:
-                        df = df.reset_index()
-                        df = df.rename(columns={'index': '날짜'})
-                    
-                    # 숫자 데이터 변환
-                    numeric_columns = ['실측', '배합', '상한선', '하한선']
-                    for col in numeric_columns:
-                        if col in df.columns:
-                            df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', ''), errors='coerce')
-                    
-                    # 날짜 변환
-                    if pd.api.types.is_numeric_dtype(df['날짜']):
-                        df['날짜'] = pd.TimedeltaIndex(df['날짜'], unit='D') + pd.Timestamp('1899-12-30')
-                    else:
-                        df['날짜'] = pd.to_datetime(df['날짜'], errors='coerce')
-                    
-                    # 결측치 처리
-                    df = df.dropna(subset=['날짜'])
-                    
-                    # 시트 이름을 구분으로 추가
-                    df['sheet_name'] = sheet_name
-                    
-                    all_data[sheet_name] = df
-        finally:
-            # 엑셀 파일 닫기 및 앱 종료
-            wb.close()
-            app.quit()
+        # 모든 시트 처리
+        for sheet_name in wb.sheetnames:
+            sheet = wb[sheet_name]
             
-            # 임시 파일 삭제
-            import os
-            os.unlink(temp_path)
+            # 데이터 범위 읽기
+            values = list(sheet.values)
+            
+            # 헤더가 있다고 가정하고 데이터프레임 생성
+            if values and len(values) > 1:
+                headers = values[0]
+                data = values[1:]
+                df = pd.DataFrame(data, columns=headers)
+                
+                # 인덱스 컬럼이 없으면 추가
+                if '날짜' not in df.columns:
+                    df = df.reset_index()
+                    df = df.rename(columns={'index': '날짜'})
+                
+                # 숫자 데이터 변환
+                numeric_columns = ['실측', '배합', '상한선', '하한선']
+                for col in numeric_columns:
+                    if col in df.columns:
+                        df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', ''), errors='coerce')
+                
+                # 날짜 변환
+                if pd.api.types.is_numeric_dtype(df['날짜']):
+                    df['날짜'] = pd.TimedeltaIndex(df['날짜'], unit='D') + pd.Timestamp('1899-12-30')
+                else:
+                    df['날짜'] = pd.to_datetime(df['날짜'], errors='coerce')
+                
+                # 결측치 처리
+                df = df.dropna(subset=['날짜'])
+                
+                # 시트 이름을 구분으로 추가
+                df['sheet_name'] = sheet_name
+                
+                all_data[sheet_name] = df
+        
+        # 임시 파일 삭제
+        import os
+        os.unlink(temp_path)
         
         return all_data
     except Exception as e:
